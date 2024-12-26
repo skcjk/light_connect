@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "dma.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -57,7 +56,7 @@ typedef struct
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t aRxBuffer2, aRxBuffer3, tFlag2 = 0, tFlag3 = 0;			
+uint8_t aRxBuffer2, aRxBuffer3;			
 rxStruct txS = {
         .rx_buf = {0}, 
         .data_length = 0 
@@ -66,10 +65,6 @@ rxStruct rxS2 = {
         .rx_buf = {0}, 
         .data_length = 0 
 };
-rxStruct rxS3 = {
-        .rx_buf = {0}, 
-        .data_length = 0 
-};	
 
 SystemState currentState = STATE_STOPPED;
 /* USER CODE END PV */
@@ -114,7 +109,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_TIM1_Init();
@@ -128,23 +122,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_Delay(5);
-    if (currentState == STATE_STARTED){
-      if (rxS2.data_length > 0 && tFlag2 == 0)
-      {
-        memcpy(txS.rx_buf, rxS2.rx_buf, rxS2.data_length);
-        txS.data_length = rxS2.data_length;
-        HAL_UART_Transmit_DMA(&huart3, (uint8_t *)txS.rx_buf, txS.data_length); //
-        tFlag2 = 1;
-      }
-    }
-    if (rxS3.data_length > 0 && tFlag3 == 0)
-    {
-      memcpy(txS.rx_buf, rxS3.rx_buf, rxS3.data_length);
-      txS.data_length = rxS3.data_length;
-      HAL_UART_Transmit_DMA(&huart2, (uint8_t *)txS.rx_buf, txS.data_length); //
-      tFlag3 = 1;
-    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -199,10 +176,12 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim)//回调函数
 	{
     if (currentState == STATE_STARTING) {
       currentState = STATE_STARTED;
-      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//启用前清除TIM中断标志�?????
+      HAL_UART_Transmit(&huart3, (uint8_t *)rxS2.rx_buf, rxS2.data_length,6);
+      rxS2.data_length = 0;
+      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//启用前清除TIM中断标志�????????
       __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//启用前清除TIM中断
       __HAL_TIM_SET_COUNTER(&htim1, 10000-10000); // 重置定时1s
-      HAL_TIM_Base_Start_IT(&htim1);//�?????启TIM计数
+      HAL_TIM_Base_Start_IT(&htim1);//�????????启TIM计数
     }
     else if (currentState == STATE_STARTED) {
       currentState = STATE_STOPPED;
@@ -222,39 +201,35 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   */
   if(huart->Instance == USART2)
   {
-    if ((rxS2.data_length >= RX_BUF_LEN-1) || tFlag2 == 1) //
-    {
-      rxS2.data_length = 0;
-      // memset(rxS2.rx_buf, 0x00, sizeof(rxS2.rx_buf));
-      tFlag2 = 0;
+    if ((currentState == STATE_STOPPED) || (currentState == STATE_STARTING)) {
+      if ((rxS2.data_length >= RX_BUF_LEN-1)) //
+      {
+        rxS2.data_length = 0;
+      }
+      rxS2.rx_buf[rxS2.data_length++] = aRxBuffer2; //
     }
-    rxS2.rx_buf[rxS2.data_length++] = aRxBuffer2; //
-    HAL_UART_Receive_IT(&huart2, (uint8_t *)&aRxBuffer2, 1); //
+    
     if (currentState == STATE_STOPPED) {
       currentState = STATE_STARTING;
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // 打开PA5引脚
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
-      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//启用前清除TIM中断标志�?????
+      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//启用前清除TIM中断标志�????????
       __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//启用前清除TIM中断
       __HAL_TIM_SET_COUNTER(&htim1, 10000-50); // 重置定时
-      HAL_TIM_Base_Start_IT(&htim1);//�?????启TIM计数
+      HAL_TIM_Base_Start_IT(&htim1);//�????????启TIM计数
     }
     else if (currentState == STATE_STARTED) {
       __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//清除TIM中断
       __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//清除TIM中断
       __HAL_TIM_SET_COUNTER(&htim1, 10000-10000); // 重置定时
-      HAL_TIM_Base_Start_IT(&htim1);//�?????启TIM计数
+      HAL_TIM_Base_Start_IT(&htim1);//�????????启TIM计数
+      HAL_UART_Transmit(&huart3, (uint8_t *)&aRxBuffer2, 1, 0); //
     }
+    HAL_UART_Receive_IT(&huart2, (uint8_t *)&aRxBuffer2, 1); //
   }
   if (huart->Instance == USART3)
   {
-    if ((rxS3.data_length >= RX_BUF_LEN-1) || tFlag3 == 1) //
-    {
-      rxS3.data_length = 0;
-      // memset(rxS3.rx_buf, 0x00, sizeof(rxS3.rx_buf));
-      tFlag3 = 0;
-    }
-    rxS3.rx_buf[rxS3.data_length++] = aRxBuffer3; //
+    HAL_UART_Transmit(&huart2, (uint8_t *)&aRxBuffer3, 1, 0); //
     HAL_UART_Receive_IT(&huart3, (uint8_t *)&aRxBuffer3, 1); //
   }
 }
