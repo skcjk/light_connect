@@ -25,6 +25,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+
+#define VOLTAGE_TEST 1
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -116,12 +118,20 @@ int main(void)
   HAL_UART_Receive_IT(&huart2, (uint8_t *)&aRxBuffer2, 1); //
   HAL_UART_Receive_IT(&huart3, (uint8_t *)&aRxBuffer3, 1); //
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+
+#ifdef VOLTAGE_TEST
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // 打开PA5引脚
+#endif
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+#ifdef VOLTAGE_TEST
+    HAL_Delay(1000);
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
+#endif
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -168,6 +178,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+#ifndef VOLTAGE_TEST
 //TIM定时返回函数
 void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim)//回调函数
 {
@@ -191,7 +202,6 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim)//回调函数
   }
 }
 
-/* USER CODE BEGIN 0 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   /* Prevent unused argument(s) compilation warning */
@@ -233,6 +243,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     HAL_UART_Receive_IT(&huart3, (uint8_t *)&aRxBuffer3, 1); //
   }
 }
+
+#endif
 /* USER CODE END 4 */
 
 /**
