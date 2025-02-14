@@ -26,7 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 
-//#define VOLTAGE_TEST 1
+#define VOLTAGE_TEST 1
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
