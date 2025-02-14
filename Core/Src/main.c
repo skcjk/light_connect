@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -26,7 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 
-#define VOLTAGE_TEST 1
+//#define VOLTAGE_TEST 1
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -111,16 +111,18 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_TIM1_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
-  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart2, (uint8_t *)&aRxBuffer2, 1); //
+	HAL_UART_Receive_IT(&huart2, (uint8_t *)&aRxBuffer2, 1); //
   HAL_UART_Receive_IT(&huart3, (uint8_t *)&aRxBuffer3, 1); //
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
 
 #ifdef VOLTAGE_TEST
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // 打开PA5引脚
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // ??PA5??
 #endif
   /* USER CODE END 2 */
 
@@ -128,10 +130,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-#ifdef VOLTAGE_TEST
     HAL_Delay(1000);
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
-#endif
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -148,15 +148,22 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
+  /** Configure the main internal regulator output voltage
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 128;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -168,10 +175,10 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
   {
     Error_Handler();
   }
@@ -179,25 +186,25 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 #ifndef VOLTAGE_TEST
-//TIM定时返回函数
-void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim)//回调函数
+//TIM??????
+void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim)//????
 {
  
-	if(htim->Instance == TIM1)//判断进入定时1通道回调函数
+	if(htim->Instance == TIM1)//??????1??????
 	{
     if (currentState == STATE_STARTING) {
       currentState = STATE_STARTED;
       HAL_UART_Transmit(&huart3, (uint8_t *)rxS2.rx_buf, rxS2.data_length,6);
       rxS2.data_length = 0;
-      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//启用前清除TIM中断标志�????????
-      __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//启用前清除TIM中断
-      __HAL_TIM_SET_COUNTER(&htim1, 10000-10000); // 重置定时1s
-      HAL_TIM_Base_Start_IT(&htim1);//�????????启TIM计数
+      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//?????TIM?????????????
+      __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//?????TIM??
+      __HAL_TIM_SET_COUNTER(&htim1, 10000-10000); // ????1s
+      HAL_TIM_Base_Start_IT(&htim1);//??????????TIM??
     }
     else if (currentState == STATE_STARTED) {
       currentState = STATE_STOPPED;
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // 关闭PA5引脚
-      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // ??PA5??
+      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
     }
   }
 }
@@ -209,6 +216,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   /* NOTE: This function Should not be modified, when the callback is needed,
            the HAL_UART_TxCpltCallback could be implemented in the user file
   */
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
   if(huart->Instance == USART2)
   {
     if ((currentState == STATE_STOPPED) || (currentState == STATE_STARTING)) {
@@ -221,18 +229,18 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     
     if (currentState == STATE_STOPPED) {
       currentState = STATE_STARTING;
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // 打开PA5引脚
-      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
-      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//启用前清除TIM中断标志�????????
-      __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//启用前清除TIM中断
-      __HAL_TIM_SET_COUNTER(&htim1, 10000-50); // 重置定时
-      HAL_TIM_Base_Start_IT(&htim1);//�????????启TIM计数
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // ??PA5??
+      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_RESET);
+      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//?????TIM?????????????
+      __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//?????TIM??
+      __HAL_TIM_SET_COUNTER(&htim1, 10000-50); // ????
+      HAL_TIM_Base_Start_IT(&htim1);//??????????TIM??
     }
     else if (currentState == STATE_STARTED) {
-      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//清除TIM中断
-      __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//清除TIM中断
-      __HAL_TIM_SET_COUNTER(&htim1, 10000-10000); // 重置定时
-      HAL_TIM_Base_Start_IT(&htim1);//�????????启TIM计数
+      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);//??TIM??
+      __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);//??TIM??
+      __HAL_TIM_SET_COUNTER(&htim1, 10000-10000); // ????
+      HAL_TIM_Base_Start_IT(&htim1);//??????????TIM??
       HAL_UART_Transmit(&huart3, (uint8_t *)&aRxBuffer2, 1, 0); //
     }
     HAL_UART_Receive_IT(&huart2, (uint8_t *)&aRxBuffer2, 1); //
@@ -242,6 +250,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     HAL_UART_Transmit(&huart2, (uint8_t *)&aRxBuffer3, 1, 0); //
     HAL_UART_Receive_IT(&huart3, (uint8_t *)&aRxBuffer3, 1); //
   }
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
 }
 
 #endif
