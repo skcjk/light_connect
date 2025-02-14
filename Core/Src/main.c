@@ -216,7 +216,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   /* NOTE: This function Should not be modified, when the callback is needed,
            the HAL_UART_TxCpltCallback could be implemented in the user file
   */
-	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
   if(huart->Instance == USART2)
   {
     if ((currentState == STATE_STOPPED) || (currentState == STATE_STARTING)) {
@@ -247,10 +246,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   }
   if (huart->Instance == USART3)
   {
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
     HAL_UART_Transmit(&huart2, (uint8_t *)&aRxBuffer3, 1, 0); //
     HAL_UART_Receive_IT(&huart3, (uint8_t *)&aRxBuffer3, 1); //
+		HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
   }
-	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
 }
 
 #endif
